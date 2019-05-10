@@ -13,7 +13,7 @@ public:
     //  拆分凹多边形
     math::Pointss CutPolygons(const math::Points & points);
 
-private:
+public:
     //  拆分闭合路径
     struct CutClosePath {
         static math::Pointss Cut(math::Points points);
@@ -42,7 +42,7 @@ private:
             const Vec2 & p1, 
             const Vec2 & p2);
         
-        static bool CheckCross(
+        static void CheckCross(
             const math::Points & points, 
             const Vec2 & a, 
             const Vec2 & b, 

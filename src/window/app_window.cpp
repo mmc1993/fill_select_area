@@ -39,22 +39,6 @@ void AppWindow::OnMessage(UINT uint, WPARAM wparam, LPARAM lparam)
 		break;
     case WM_LBUTTONDOWN:
         {
-            math::Points points{
-                { 240, 48 },
-                { 793, 129 },
-                { 710, 572 },
-                { 678, 370 },
-                { 528, 581 },
-                { 578, 306 },
-                { 286, 469 },
-                { 461, 269 },
-                { 122, 269 },
-                { 659, 216 },
-            };
-            for (auto & point : points)
-            {
-                //AddPoint(point, RGB(255, 0, 0));
-            }
             AddPoint({ 
                 (float)GET_X_LPARAM(lparam),
                 (float)GET_Y_LPARAM(lparam) }, 
@@ -116,7 +100,6 @@ void AppWindow::Update()
             for (auto & polygon: _polygons)
             {
                 DCFillPolygon(polygon.ps, polygon.c);
-                //DCPolygon(polygon.ps, polygon.c);
             }
         }
         break;
@@ -145,6 +128,7 @@ void AppWindow::RunCutting()
         for (auto & closePath : _cutting.CutClosePaths(points))
         {
             _closePaths.push_back({ closePath, NewColor() });
+
             for (auto & polygon : _cutting.CutPolygons(closePath))
             {
                 _polygons.push_back({ polygon, NewColor() });
