@@ -6,6 +6,7 @@
 namespace math {
 
 using Points = std::vector<Vec2>;
+using Pointss = std::vector<Points>;
 
 static bool OnLine(const Vec2 & p, const Vec2 & a, const Vec2 & b)
 {

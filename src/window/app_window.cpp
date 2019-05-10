@@ -115,7 +115,8 @@ void AppWindow::Update()
         {
             for (auto & polygon: _polygons)
             {
-                DCPolygon(polygon.ps, polygon.c);
+                DCFillPolygon(polygon.ps, polygon.c);
+                //DCPolygon(polygon.ps, polygon.c);
             }
         }
         break;
@@ -141,18 +142,13 @@ void AppWindow::RunCutting()
         std::transform(_points.begin(), _points.end(), std::back_inserter(points),
                        [](const Point & point) { return point.v; });
 
-        _cutting.SetPoints(points);
-        for (auto & closePath : _cutting.CutClosePaths())
+        for (auto & closePath : _cutting.CutClosePaths(points))
         {
             _closePaths.push_back({ closePath, NewColor() });
-        }
-        for (auto & triangle : _cutting.CutTriangles())
-        {
-            _triangles.push_back({ triangle, NewColor() });
-        }
-        for (auto & polygon : _cutting.CutPolygons())
-        {
-            _polygons.push_back({ polygon, NewColor() });
+            for (auto & polygon : _cutting.CutPolygons(closePath))
+            {
+                _polygons.push_back({ polygon, NewColor() });
+            }
         }
     }
 }

@@ -1,117 +1,98 @@
 #include "cutting.h"
 
-const std::vector<math::Points> & Cutting::ClosePath::Cut(const math::Points & points)
+math::Pointss Cutting::CutClosePaths(const math::Points & points)
 {
-    _result.clear();
-    _points = points;
-    for (auto i = 0; i != _points.size(); )
-    {
-        Vec2 crossP;
-        size_t crossA, crossB;
-        auto & a = _points.at(INDEX(i    , _points.size()));
-        auto & b = _points.at(INDEX(i + 1, _points.size()));
-        if (CheckCross(i, a, b, &crossA, &crossB, &crossP))
-        {
-            i = NewPath(crossP, INDEX(crossA + 1, _points.size()), i + 1);
-        }
-        else { ++i; }
-    }
-    return _result;
+    return CutClosePath::Cut(points);
 }
 
-size_t Cutting::ClosePath::NewPath(const Vec2 & point, size_t beg, size_t end)
+math::Pointss Cutting::CutPolygons(const math::Pointss & pointss)
 {
-    math::Points path{ point };
-    std::copy(std::next(_points.begin(), beg),
-              std::next(_points.begin(), end),
-              std::back_inserter(path));
-    _points.erase(std::next(_points.begin(), beg),
-                  std::next(_points.begin(), end));
-    _points.insert(std::next(_points.begin(), beg), point);
-    _result.push_back(std::move(path));
+    return CutPolygon::Cut(pointss);
+}
+
+math::Pointss Cutting::CutPolygons(const math::Points & points)
+{
+    return CutPolygon::Cut(points);
+}
+
+math::Pointss Cutting::CutClosePath::Cut(math::Points points)
+{
+    math::Pointss result;
+    while (points.size() >= 3)
+    {
+        Vec2 crossP;
+        size_t crossA = 0;
+        size_t crossB = 0;
+        for (auto i = 2; i != points.size();)
+        {
+            auto & a = points.at(INDEX(i    , points.size()));
+            auto & b = points.at(INDEX(i + 1, points.size()));
+            if (CheckCross(points, i, a, b, &crossA, &crossB, &crossP))
+            {
+                i = NewClose(points, result, crossP, crossB, i + 1);
+            }
+            else { ++i; }
+        }
+        if (crossA == 0 && crossB == 0) { break; }
+    }
+    return result;
+}
+
+size_t Cutting::CutClosePath::NewClose(math::Points & points, math::Pointss & pointss, const Vec2 & point, size_t beg, size_t end)
+{
+    math::Points result{ point };
+    std::copy(points.begin() + beg, 
+              points.begin() + end, 
+              std::back_inserter(result));
+    points.erase(points.begin() + beg, 
+                 points.begin() + end);
+    points.insert(points.begin() + beg, point);
+    pointss.push_back(result);
     return beg;
 }
 
-bool Cutting::ClosePath::CheckCross(size_t idx, const Vec2 & a, const Vec2 & b, size_t * crossA, size_t * crossB, Vec2 * crossP)
+bool Cutting::CutClosePath::CheckCross(const math::Points & points, size_t idx, const Vec2 & a, const Vec2 & b, size_t * crossA, size_t * crossB, Vec2 * crossP)
 {
-    auto isCross = false;
-
     if (idx >= 2)
     {
-        idx -= 1;
-        float outA = 0;
-        float outB = 0;
-        float distance = std::numeric_limits<float>::max();
-        for (auto i = 0; i != idx; ++i)
+        auto distance = std::numeric_limits<float>::max();
+        for (auto i = 0; i != idx - 1; ++i)
         {
-            auto & c = _points.at(INDEX(i    , _points.size()));
-            auto & d = _points.at(INDEX(i + 1, _points.size()));
-            if (math::IsCrossSegment(a, b, c, d, &outA, &outB))
+            auto outA = 0.0f;
+            auto outB = 0.0f;
+            auto & c = points.at(INDEX(i    , points.size()));
+            auto & d = points.at(INDEX(i + 1, points.size()));
+            if (math::IsCrossSegment(a, b, c, d, &outA, &outB) && outA < distance)
             {
-                if (outA < distance)
-                {
-                    isCross = true;
-                    distance = outA;
-                    *crossP = a.Lerp(b, outA);
-                    *crossA = INDEX(i    , _points.size());
-                    *crossB = INDEX(i + 1, _points.size());
-                }
+                distance = outA;
+                *crossP = a.Lerp(b, outA);
+                *crossA = INDEX(i    , points.size());
+                *crossB = INDEX(i + 1, points.size());
             }
         }
+        return distance < std::numeric_limits<float>::max();
     }
-    return isCross;
+    return false;
 }
 
-
-
-void Cutting::SetPoints(const math::Points & points)
+math::Pointss Cutting::CutPolygon::Cut(const math::Pointss & pointss)
 {
-    _closePathResult.clear();
-    _triangleResult.clear();
-    _polygonResult.clear();
-    ClosePath closePath;
-    Triangle triangle;
-    Polygon polygon;
-
-    _closePathResult = closePath.Cut(points);
-    for (auto & path : _closePathResult)
+    math::Pointss result;
+    for (auto & points : pointss)
     {
-        auto result = polygon.Cut(path);
-        std::copy(result.begin(), result.end(), 
-           std::back_inserter(_polygonResult));
+        CutImpl(points, result);
     }
-
-    for (auto & polygon : _polygonResult)
-    {
-        auto result = triangle.Cut(polygon);
-        std::copy(result.begin(), result.end(),
-          std::back_inserter(_triangleResult));
-    }
+    return result;
 }
 
-const std::vector<math::Points> & Cutting::CutClosePaths()
+math::Pointss Cutting::CutPolygon::Cut(const math::Points & points)
 {
-    return _closePathResult;
+    math::Pointss result;
+    CutImpl(points, result);
+    return result;
 }
 
-const std::vector<math::Points> & Cutting::CutTriangles()
-{
-    return _triangleResult;
-}
-
-const std::vector<math::Points> & Cutting::CutPolygons()
-{
-    return _polygonResult;
-}
-
-const std::vector<math::Points> & Cutting::Polygon::Cut(const math::Points & points)
-{
-    _result.clear();
-    CutImpl(points);
-    return _result;
-}
-
-float Cutting::Polygon::CheckOrder(const math::Points & points)
+float Cutting::CutPolygon::CheckOrder(const math::Points & points)
 {
     auto order0 = 0;    //  Ë³Ê±Õë
     auto order1 = 0;    //  ÄæÊ±Õë
@@ -121,7 +102,7 @@ float Cutting::Polygon::CheckOrder(const math::Points & points)
         auto & b = points.at(INDEX(i + 1, points.size()));
         auto & c = points.at(INDEX(i + 2, points.size()));
         auto order = CheckOrder(a, b, c);
-        if (order >= 0.0f ||std::abs(order) < 0.1f)
+        if (order >= 0.0f || std::abs(order) < 0.1f)
         {
             ++order0;
         }
@@ -133,22 +114,22 @@ float Cutting::Polygon::CheckOrder(const math::Points & points)
     return order0 > order1 ? 1.0f : -1.0f;
 }
 
-float Cutting::Polygon::CheckOrder(const Vec2 & p0, const Vec2 & p1, const Vec2 & p2)
+float Cutting::CutPolygon::CheckOrder(const Vec2 & p0, const Vec2 & p1, const Vec2 & p2)
 {
     return (p1 - p0).Cross(p2 - p1);
 }
 
-void Cutting::Polygon::CheckCross(const math::Points & points, const Vec2 & a, const Vec2 & b, size_t * crossA, size_t * crossB, Vec2 * crossP)
+bool Cutting::CutPolygon::CheckCross(const math::Points & points, const Vec2 & a, const Vec2 & b, Vec2 * crossP, size_t * crossA, size_t * crossB)
 {
-    float outA, outB;
     auto distance = std::numeric_limits<float>::max();
     for (auto i = 0; i != points.size(); ++i)
     {
+        float outA, outB;
         auto & c = points.at(INDEX(i    , points.size()));
         auto & d = points.at(INDEX(i + 1, points.size()));
         if (math::IsCrossLine(a, b, c, d, &outA, &outB))
         {
-            if (outB >= 0.0f && outB <= 1.0f && 
+            if (outB >= 0.0f && outB <= 1.0f &&
                 outA > 1.0f && outA < distance)
             {
                 distance = outA;
@@ -158,73 +139,48 @@ void Cutting::Polygon::CheckCross(const math::Points & points, const Vec2 & a, c
             }
         }
     }
-    assert(distance != std::numeric_limits<float>::max());
+    //assert(distance != std::numeric_limits<float>::max());
+    return (distance != std::numeric_limits<float>::max());
 }
 
-void Cutting::Polygon::NewPolygon(const math::Points & points, 
-                                  const Vec2 & point, 
-                                  size_t crossA, 
-                                  size_t crossB, 
-                                  size_t originA,
-                                  size_t originB)
+void Cutting::CutPolygon::NewPolygon(const math::Points & points, const Vec2 & point, const size_t crossA, const size_t crossB, const size_t startA, const size_t startB, math::Pointss & pointss)
 {
     math::Points points0{ point };
-    math::Points points1{ point };
-    for (auto i = crossB; i != originB; i = INDEX(i + 1, points.size()))
+    for (auto i = crossB; i != startB; i = INDEX(i + 1, points.size()))
     {
         points0.push_back(points.at(i));
     }
-    CutImpl(points0);
+    CutImpl(points0, pointss);
 
-    for (auto i = originA; i != crossB; i = INDEX(i + 1, points.size()))
+    math::Points points1{ point };
+    for (auto i = startB; i != crossB; i = INDEX(i + 1, points.size()))
     {
         points1.push_back(points.at(i));
     }
-    CutImpl(points1);
+    CutImpl(points1, pointss);
 }
 
-void Cutting::Polygon::CutImpl(const math::Points & points)
+void Cutting::CutPolygon::CutImpl(const math::Points & points, math::Pointss & pointss)
 {
     Vec2 crossP;
     size_t crossA = 0;
     size_t crossB = 0;
-    auto order = CheckOrder(points);
-    for (auto i = 2; i != points.size(); ++i)
+    auto polOrder = CheckOrder(points);
+    for (auto i = 0; i != points.size(); ++i)
     {
-        auto & a = points.at(INDEX(i - 1, points.size()));
-        auto & b = points.at(INDEX(i    , points.size()));
-        auto & c = points.at(INDEX(i + 1, points.size()));
+        auto & a = points.at(INDEX(i, points.size()));
+        auto & b = points.at(INDEX(i + 1, points.size()));
+        auto & c = points.at(INDEX(i + 2, points.size()));
         auto n = std::abs(CheckOrder(a, b, c)) > 0.1f
                         ? CheckOrder(a, b, c) : 0.0f;
-        if (n * order < 0)
+        if (n * polOrder < 0 && CheckCross(points, a, b, &crossP, &crossA, &crossB))
         {
-            CheckCross(points, a, b, &crossA, &crossB, &crossP);
-            NewPolygon(points, crossP, 
-                       crossA, crossB, 
-                       INDEX(i    , points.size()),
-                       INDEX(i + 1, points.size()));
+            NewPolygon(points, 
+                crossP, crossA, crossB, 
+                INDEX(i    , points.size()),
+                INDEX(i + 1, points.size()), pointss);
             return;
         }
     }
-    _result.push_back(points);
-}
-
-const std::vector<math::Points>& Cutting::Triangle::Cut(const math::Points & points)
-{
-    Vec2 origin;
-    for (auto i = 0; i != points.size(); ++i)
-    {
-        origin += points.at(i);
-    }
-    origin.x = origin.x / points.size();
-    origin.y = origin.y / points.size();
-
-    _result.clear();
-    for (auto i = 0; i != points.size(); ++i)
-    {
-        auto & a = points.at(INDEX(i    , points.size()));
-        auto & b = points.at(INDEX(i + 1, points.size()));
-        _result.push_back({ origin, a, b });
-    }
-    return _result;
+    pointss.push_back(points);
 }
