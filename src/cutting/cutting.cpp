@@ -94,15 +94,19 @@ math::Pointss Cutting::CutPolygon::Cut(const math::Points & points)
 
 float Cutting::CutPolygon::CheckOrder(const math::Points & points)
 {
-    float s = 0;
+    auto beg = 0;
     for (auto i = 0; i != points.size(); ++i)
     {
-        auto & a = points.at(INDEX(i    , points.size()));
-        auto & b = points.at(INDEX(i + 1, points.size()));
-        auto & c = points.at(INDEX(i + 2, points.size()));
-        s += (b - a).Cross(c - b);
+        if (points.at(i).x < points.at(beg).x)
+        {
+            beg = i;
+        }
     }
-    return s >= 0? 1.0f : -1.0f;
+
+    auto & a = points.at(beg                                          );
+    auto & b = points.at(INDEX(beg + 1                , points.size()));
+    auto & c = points.at(INDEX(beg + points.size() - 1, points.size()));
+    return (b - a).Cross(c - a) >= 0 ? 1.0f : -1.0f;
 }
 
 float Cutting::CutPolygon::CheckOrder(const Vec2 & p0, const Vec2 & p1, const Vec2 & p2)
