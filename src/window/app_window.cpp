@@ -102,13 +102,13 @@ void AppWindow::Update()
         break;
     case ShowTypeEnum::kTRIANGLE:
         {
-            for (auto & triangle : _triangles)
+            for (auto & polygon : _polygons)
             {
-                auto r = ((triangle.c >> 0x00) & 0x0000ff) / 2;
-                auto g = ((triangle.c >> 0x08) & 0x0000ff) / 2;
-                auto b = ((triangle.c >> 0x10) & 0x0000ff) / 2;
-                DCFillPolygon(triangle.ps, RGB(r, g, b));
-                DCPolygon(triangle.ps, triangle.c);
+                for (auto i = 1; i != polygon.ps.size(); ++i)
+                {
+                    DCLine(polygon.ps.at(0), polygon.ps.at(i), polygon.c);
+                }
+                DCPolygon(polygon.ps, polygon.c);
             }
         }
         break;
