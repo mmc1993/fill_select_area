@@ -18,6 +18,7 @@ math::Pointss Cutting::CutPolygons(const math::Points & points)
 math::Pointss Cutting::CutClosePath::Cut(math::Points points)
 {
     math::Pointss result;
+    result.push_back(points);
     while (points.size() >= 3)
     {
         Vec2 crossP;
@@ -103,10 +104,24 @@ float Cutting::CutPolygon::CheckOrder(const math::Points & points)
         }
     }
 
-    auto & a = points.at(beg                                          );
-    auto & b = points.at(INDEX(beg + 1                , points.size()));
-    auto & c = points.at(INDEX(beg + points.size() - 1, points.size()));
-    return (b - a).Cross(c - a) >= 0 ? 1.0f : -1.0f;
+    auto & a = points.at(beg);
+    Vec2 b = a;
+    Vec2 c = a;
+    for (auto i = INDEX(beg + 1, points.size()); i != beg;
+              i = INDEX(i   + 1, points.size()))
+    {
+        if (points.at(i) != a) { b = points.at(i); break; }
+    }
+    for (auto i = INDEX(beg + points.size() - 1, points.size()); i != beg; 
+              i = INDEX(i   + points.size() - 1, points.size()))
+    { 
+        if (points.at(i) != a) { c = points.at(i); break; }
+    }
+    if (a != b && a != c && b != c)
+    {
+        return (b - a).Cross(c - a) >= 0 ? 1.0f : -1.0f;
+    }
+    return 0;
 }
 
 float Cutting::CutPolygon::CheckOrder(const Vec2 & p0, const Vec2 & p1, const Vec2 & p2)
@@ -160,21 +175,24 @@ void Cutting::CutPolygon::CutImpl(const math::Points & points, math::Pointss & p
     size_t crossA = 0;
     size_t crossB = 0;
     auto polOrder = CheckOrder(points);
-    for (auto i = 0; i != points.size(); ++i)
+    if (polOrder != 0)
     {
-        auto & a = points.at(INDEX(i, points.size()));
-        auto & b = points.at(INDEX(i + 1, points.size()));
-        auto & c = points.at(INDEX(i + 2, points.size()));
-        auto n = std::abs(CheckOrder(a, b, c)) > 0.1f
-                        ? CheckOrder(a, b, c) : 0.0f;
-        if (n * polOrder < 0)
+        for (auto i = 0; i != points.size(); ++i)
         {
-            CheckCross(points, a, b, &crossP, &crossA, &crossB);
-            NewPolygon(points, 
-                crossP, crossA, crossB, 
-                INDEX(i    , points.size()),
-                INDEX(i + 1, points.size()), pointss);
-            return;
+            auto & a = points.at(INDEX(i, points.size()));
+            auto & b = points.at(INDEX(i + 1, points.size()));
+            auto & c = points.at(INDEX(i + 2, points.size()));
+            auto n = std::abs(CheckOrder(a, b, c)) > 0.1f
+                            ? CheckOrder(a, b, c) : 0.0f;
+            if (n * polOrder < 0)
+            {
+                CheckCross(points, a, b, &crossP, &crossA, &crossB);
+                NewPolygon(points,
+                    crossP, crossA, crossB,
+                    INDEX(i, points.size()),
+                    INDEX(i + 1, points.size()), pointss);
+                return;
+            }
         }
     }
     pointss.push_back(points);

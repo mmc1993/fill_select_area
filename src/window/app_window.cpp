@@ -47,22 +47,18 @@ void AppWindow::OnMessage(UINT uint, WPARAM wparam, LPARAM lparam)
         break;
     case WM_RBUTTONDOWN:
         {
-            //math::Points points{
-            //    { -430.643670886076f, 225.7278481012658f },
-            //    { -277, -148 },
-            //    { -377, 112 },
-            //    { 345, 298 },
-            //    { -75, 370 },
-            //    { 109, 400 },
-            //    { 213, 490 },
-            //    { -141, 482 },
-            //    { -291, 440 },
-            //    { -405, 234 },
-            //};
-            //for (auto & point : points)
-            //{
-            //    AddPoint(Vec2(point.x + 450, point.y + 150), RGB(255, 0, 0));
-            //}
+            math::Points points{
+                { 0 * 20, 0 * 20 },
+                { 0 * 20, 0 * 20 },
+                { 10 * 20, 20 * 20 },
+                { 10 * 20, 0 * 20 },
+                { 5 * 20, 5 * 20 },
+            };
+            _points.clear();
+            for (auto & point : points)
+            {
+                AddPoint(Vec2(point.x + 450, point.y + 150), RGB(255, 0, 0));
+            }
 
             RunCutting();
         }
